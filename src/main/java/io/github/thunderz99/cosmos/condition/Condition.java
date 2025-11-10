@@ -983,7 +983,7 @@ public class Condition {
         cond.fields = new LinkedHashSet<>(this.fields);
         cond.crossPartition = this.crossPartition;
         cond.negative = this.negative;
-        cond.join = this.join;
+        cond.join = new LinkedHashSet<>(this.join);
         cond.returnAllSubArray = this.returnAllSubArray;
         cond.collate = this.collate;
 

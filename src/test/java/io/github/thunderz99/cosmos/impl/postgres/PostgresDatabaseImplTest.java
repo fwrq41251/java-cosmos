@@ -1,5 +1,15 @@
 package io.github.thunderz99.cosmos.impl.postgres;
 
+import java.io.PrintWriter;
+import java.io.StringWriter;
+import java.time.Instant;
+import java.time.ZoneId;
+import java.time.format.DateTimeFormatter;
+import java.util.*;
+import java.util.concurrent.Future;
+import java.util.stream.Collectors;
+import java.util.stream.IntStream;
+
 import com.fasterxml.jackson.core.type.TypeReference;
 import com.google.common.collect.Maps;
 import com.microsoft.azure.documentdb.SqlParameter;
@@ -13,14 +23,12 @@ import io.github.thunderz99.cosmos.dto.EvalSkip;
 import io.github.thunderz99.cosmos.dto.FullNameUser;
 import io.github.thunderz99.cosmos.dto.PartialUpdateOption;
 import io.github.thunderz99.cosmos.impl.cosmosdb.CosmosImpl;
-import io.github.thunderz99.cosmos.impl.postgres.dto.QueryContext;
 import io.github.thunderz99.cosmos.impl.postgres.util.TTLUtil;
 import io.github.thunderz99.cosmos.impl.postgres.util.TableUtil;
 import io.github.thunderz99.cosmos.util.EnvUtil;
 import io.github.thunderz99.cosmos.util.JsonUtil;
 import io.github.thunderz99.cosmos.v4.PatchOperations;
 import org.apache.commons.lang3.RandomStringUtils;
-import org.apache.commons.lang3.StringUtils;
 import org.assertj.core.data.Percentage;
 import org.junit.jupiter.api.AfterAll;
 import org.junit.jupiter.api.BeforeAll;
@@ -28,16 +36,6 @@ import org.junit.jupiter.api.Disabled;
 import org.junit.jupiter.api.Test;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
-
-import java.io.PrintWriter;
-import java.io.StringWriter;
-import java.time.Instant;
-import java.time.ZoneId;
-import java.time.format.DateTimeFormatter;
-import java.util.*;
-import java.util.concurrent.Future;
-import java.util.stream.Collectors;
-import java.util.stream.IntStream;
 
 import static io.github.thunderz99.cosmos.condition.SubConditionType.AND;
 import static io.github.thunderz99.cosmos.condition.SubConditionType.OR;
@@ -2874,6 +2872,18 @@ public class PostgresDatabaseImplTest {
                 assertThat(result.get(0).getOrDefault("id", "")).isEqualTo("WakefieldFamily");
                 // only sub set of children is returned
                 assertThat((List<Map<String, Object>>) result.get(0).get("children")).hasSize(1);
+            }
+            {   //test ELEM_MATCH with or condition
+                var cond1 = Condition.filter(SubConditionType.ELEM_MATCH, Map.of(
+                        "children.gender", "male",
+                        "children.grade >=", 5
+                )).join(Set.of("parents", "children"));
+                var cond2 = Condition.filter("id", "");
+                var cond = Condition.filter(OR, List.of(cond1, cond2));
+                // test find
+                var result = db.find(host, cond, "Families").toMap();
+                assertThat(result).hasSize(1);
+                assertThat(result.get(0).getOrDefault("id", "")).isEqualTo("WakefieldFamily");
             }
         }finally {
             db.delete(host, id3, "Families");

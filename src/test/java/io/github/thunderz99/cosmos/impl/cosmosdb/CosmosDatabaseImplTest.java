@@ -10,7 +10,6 @@ import java.util.stream.Collectors;
 import java.util.stream.IntStream;
 
 import com.fasterxml.jackson.core.type.TypeReference;
-import com.google.common.collect.Lists;
 import com.google.common.collect.Maps;
 import com.microsoft.azure.documentdb.SqlParameter;
 import com.microsoft.azure.documentdb.SqlParameterCollection;
@@ -2347,6 +2346,18 @@ class CosmosDatabaseImplTest {
                 assertThat(result.get(0).getOrDefault("id", "")).isEqualTo("WakefieldFamily");
                 // only sub set of children is returned
                 assertThat((List<Map<String, Object>>) result.get(0).get("children")).hasSize(1);
+            }
+            {   //test ELEM_MATCH with or condition
+                var cond1 = Condition.filter(SubConditionType.ELEM_MATCH, Map.of(
+                        "children.gender", "male",
+                        "children.grade >=", 5
+                )).join(Set.of("parents", "children"));
+                var cond2 = Condition.filter("id", "");
+                var cond = Condition.filter(OR, List.of(cond1, cond2));
+                // test find
+                var result = db.find(coll, cond, "Families").toMap();
+                assertThat(result).hasSize(1);
+                assertThat(result.get(0).getOrDefault("id", "")).isEqualTo("WakefieldFamily");
             }
         }finally {
             db.delete(coll, id3, "Families");

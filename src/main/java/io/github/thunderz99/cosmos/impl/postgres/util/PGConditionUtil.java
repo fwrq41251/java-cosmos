@@ -684,16 +684,25 @@ public class PGConditionUtil {
             return null;
         }
 
-        if (value instanceof Condition) {
-            // single condition
-            return ((Condition) value).join(parentCond.join);
-        } else if (value instanceof Map<?, ?>) {
-            // single condition in the form of map
-            return new Condition(JsonUtil.toMap(value)).join(parentCond.join);
-        } else if (value instanceof Collection<?>) {
+		Condition subCond;
+
+		if (value instanceof Condition) {
+			// Make a copy to avoid modifying the original object passed into the filter
+			subCond = ((Condition) value).copy();
+		} else if (value instanceof Map<?, ?>) {
+			// Create a new Condition from the map
+			subCond = new Condition(JsonUtil.toMap(value));
+		} else if (value instanceof Collection<?>) {
             throw new IllegalArgumentException("Cannot convert input to a single condition. Ensure the input is a single value(not a collection)." + value);
-        }
-        throw new IllegalArgumentException("Invalid input. expect a condition or a map. " + value);
+        } else {
+			throw new IllegalArgumentException("Invalid input. expect a condition or a map. " + value);
+		}
+
+		// Add the parent's join keys to the sub-condition's join keys.
+		// This preserves any joins defined on the sub-condition itself.
+		subCond.join.addAll(parentCond.join);
+
+		return subCond;
     }
 
     /**
